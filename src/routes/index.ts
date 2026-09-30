@@ -42,17 +42,15 @@ analyzeRouter.post('/payload', (req, res) => {
 analyzeRouter.post('/event', (req, res) => {
   const parsed = AssessSingleEventSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: 'Invalid payload', details: parsed.error.issues }); return; }
-  const sanctioned = new Set<string>(parsed.data.sanctionedEndpointIds ?? Array.from(SANCTIONED_ENDPOINT_IDS));
-  res.json(assessEvent(parsed.data.event, sanctioned));
+  res.json(assessEvent(parsed.data.event, SANCTIONED_ENDPOINT_IDS));
 });
 
 analyzeRouter.post('/traffic', (req, res) => {
   const parsed = AnalyzeTrafficSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: 'Invalid payload', details: parsed.error.issues }); return; }
-  const sanctioned = new Set<string>(parsed.data.sanctionedEndpointIds ?? Array.from(SANCTIONED_ENDPOINT_IDS));
-  const fleet = assessFleet(parsed.data.events, sanctioned);
+  const fleet = assessFleet(parsed.data.events, SANCTIONED_ENDPOINT_IDS);
   const departments = rollupByDepartment(parsed.data.events, fleet.assessments);
-  res.json({ summary: fleet.summary, departments, assessments: fleet.assessments });
+  res.json({ dataMode: 'synthetic-input-analysis', summary: fleet.summary, departments, assessments: fleet.assessments });
 });
 
 export const incidentsRouter = Router();
@@ -63,7 +61,7 @@ incidentsRouter.get('/', (req, res) => {
   let filtered = INCIDENTS;
   if (status) filtered = filtered.filter((i) => i.status === status);
   if (severity) filtered = filtered.filter((i) => i.severity === severity);
-  res.json({ count: filtered.length, incidents: filtered });
+  res.json({ dataMode: 'synthetic-demo', count: filtered.length, incidents: filtered });
 });
 
 incidentsRouter.get('/:id', (req, res) => {
@@ -81,7 +79,8 @@ dashboardRouter.get('/summary', (_req, res) => {
   const openIncidents = INCIDENTS.filter((i) => i.status === 'open' || i.status === 'investigating');
 
   res.json({
-    capturedAt: new Date().toISOString(),
+    dataMode: 'synthetic-demo',
+    fixtureAsOf: '2026-05-07T16:00:00Z',
     fleet: fleet.summary,
     departments,
     openIncidents: openIncidents.length,

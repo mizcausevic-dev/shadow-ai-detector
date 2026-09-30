@@ -124,7 +124,7 @@ test('rollupByDepartment: throws on misaligned arrays', () => {
   assert.throws(() => rollupByDepartment([ev({})], []), /align/);
 });
 
-test('rollupByDepartment: clean department gets no recommended action', () => {
+test('rollupByDepartment: clean sample does not imply department compliance', () => {
   const events = [
     ev({ eventId: '1', user: 'a@corp.com', department: 'platform', url: 'https://api.anthropic.com/v1/messages' }),
   ];
@@ -133,5 +133,5 @@ test('rollupByDepartment: clean department gets no recommended action', () => {
   const platform = departments.find((d) => d.department === 'platform');
   assert.ok(platform);
   assert.equal(platform!.exposureScore, 0);
-  assert.match(platform!.recommendedAction, /compliant|monitor/i);
+  assert.match(platform!.recommendedAction, /No flagged sample events; broader coverage is unverified/i);
 });

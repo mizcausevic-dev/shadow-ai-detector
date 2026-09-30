@@ -49,10 +49,10 @@ const CATALOG: LlmEndpoint[] = [
   { endpointId: 'openai-dalle', provider: 'OpenAI', hostPattern: /(^|\.)api\.openai\.com$/i, pathPattern: /\/v1\/images\b/i, capability: 'image-gen', tier: 'frontier', defaultRisk: 'medium', sourceCountry: 'US' },
 
   // Higher-risk regions / data residency
-  { endpointId: 'deepseek-api', provider: 'DeepSeek', hostPattern: /(^|\.)api\.deepseek\.com$/i, capability: 'multi', tier: 'mainstream', defaultRisk: 'high', sourceCountry: 'CN', notes: 'Data residency / export-control concern.' },
-  { endpointId: 'qwen-api', provider: 'Alibaba', hostPattern: /(^|\.)dashscope\.aliyuncs\.com$/i, capability: 'multi', tier: 'mainstream', defaultRisk: 'high', sourceCountry: 'CN', notes: 'Data residency / export-control concern.' },
+  { endpointId: 'deepseek-api', provider: 'DeepSeek', hostPattern: /(^|\.)api\.deepseek\.com$/i, capability: 'multi', tier: 'mainstream', defaultRisk: 'high', sourceCountry: 'CN', notes: 'Illustrative regional review flag; hosting location requires verification.' },
+  { endpointId: 'qwen-api', provider: 'Alibaba', hostPattern: /(^|\.)dashscope\.aliyuncs\.com$/i, capability: 'multi', tier: 'mainstream', defaultRisk: 'high', sourceCountry: 'CN', notes: 'Illustrative regional review flag; hosting location requires verification.' },
   { endpointId: 'kimi-api', provider: 'Moonshot', hostPattern: /(^|\.)api\.moonshot\.cn$/i, capability: 'multi', tier: 'mainstream', defaultRisk: 'high', sourceCountry: 'CN' },
-  { endpointId: 'yandex-gpt', provider: 'Yandex', hostPattern: /(^|\.)llm\.api\.cloud\.yandex\.net$/i, capability: 'multi', tier: 'mainstream', defaultRisk: 'critical', sourceCountry: 'RU', notes: 'Sanctions / export-control concern.' },
+  { endpointId: 'yandex-gpt', provider: 'Yandex', hostPattern: /(^|\.)llm\.api\.cloud\.yandex\.net$/i, capability: 'multi', tier: 'mainstream', defaultRisk: 'critical', sourceCountry: 'RU', notes: 'Illustrative regional review flag; legal status requires verification.' },
 
   // Consumer-grade interfaces (browser-based; usually shadow-AI)
   { endpointId: 'chatgpt-web', provider: 'OpenAI', hostPattern: /(^|\.)chatgpt\.com$/i, capability: 'chat', tier: 'frontier', defaultRisk: 'high', sourceCountry: 'US', notes: 'Consumer web interface; likely shadow-AI.' },

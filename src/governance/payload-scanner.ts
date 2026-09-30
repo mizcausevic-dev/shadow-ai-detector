@@ -64,12 +64,7 @@ export interface PayloadScanResult {
 }
 
 const SEV_RANK: Record<SensitivitySeverity, number> = { critical: 4, high: 3, medium: 2, low: 1 };
-const SNIPPET_LEN = 24;
-
-function redact(s: string): string {
-  if (s.length <= 6) return '****';
-  return s.slice(0, 4) + '****' + s.slice(-2);
-}
+const REDACTED_MATCH = '[redacted]';
 
 export function scanPayload(payload: string, payloadId: string | null = null): PayloadScanResult {
   const hits: SensitivityHit[] = [];
@@ -86,7 +81,7 @@ export function scanPayload(payload: string, payloadId: string | null = null): P
         category: p.category,
         severity: p.severity,
         description: p.description,
-        matchedSnippet: redact(m[0].slice(0, SNIPPET_LEN)),
+        matchedSnippet: REDACTED_MATCH,
       });
       byCategory[p.category]++;
       if (highestSeverity === null || SEV_RANK[p.severity] > SEV_RANK[highestSeverity]) {

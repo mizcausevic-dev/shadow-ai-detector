@@ -51,7 +51,7 @@ test('scanPayload: snippet is redacted', () => {
   const hit = r.hits.find((h) => h.patternName === 'github-pat');
   assert.ok(hit);
   // Should be redacted form, not the raw token
-  assert.match(hit!.matchedSnippet, /\*+/);
+  assert.equal(hit!.matchedSnippet, '[redacted]');
   assert.doesNotMatch(hit!.matchedSnippet, /aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789/);
 });
 

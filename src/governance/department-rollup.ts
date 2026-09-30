@@ -96,13 +96,13 @@ export function rollupByDepartment(
 
     let recommendedAction: string;
     if (exposureScore >= 60) {
-      recommendedAction = 'Escalate to dept head; require all-hands AI usage briefing within 48h.';
+      recommendedAction = 'Review with the department owner and validate the sample signals before escalation.';
     } else if (exposureScore >= 30) {
-      recommendedAction = 'Schedule dept-level shadow-AI review; provision sanctioned alternatives.';
+      recommendedAction = 'Consider a department review and approved alternatives after validating the signals.';
     } else if (exposureScore > 0) {
-      recommendedAction = 'Monitor weekly; communicate sanctioned-tools list to dept.';
+      recommendedAction = 'Review local policy and continue monitoring.';
     } else {
-      recommendedAction = 'No action; department compliant.';
+      recommendedAction = 'No flagged sample events; broader coverage is unverified.';
     }
 
     result.push({ ...partial, exposureScore, recommendedAction });
