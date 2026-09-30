@@ -94,6 +94,8 @@ For each fictional department: total events, LLM events, unique users/providers,
 | GET | `/api/dashboard/summary` | Summary of the synthetic demo dataset |
 | GET | `/api/dashboard/exposure` | Department exposure rankings |
 
+The bulk traffic endpoint analyzes caller-supplied events. Its `dataMode` is `caller-supplied-unverified`, and its per-event verdicts use input position for correlation. User rankings, user identifiers, and caller event IDs are omitted from that response. Analysis responses set `Cache-Control: no-store`. The bundled dashboard and incident endpoints remain labeled as synthetic fixtures. The demo has no authentication or tenant isolation; do not submit real employee or secret data.
+
 ## Sample: Single Event Assessment
 
 ```json

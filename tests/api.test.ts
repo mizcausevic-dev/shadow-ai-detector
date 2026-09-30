@@ -72,3 +72,31 @@ test('bulk analysis rejects more than 50 events', async () => {
   const response = await post('/api/analyze/traffic', { events });
   assert.equal(response.status, 400);
 });
+
+test('caller traffic is unverified and omits user and event identifiers', async () => {
+  const identifier = 'real.user@example.com';
+  const response = await post('/api/analyze/traffic', {
+    events: [{ ...event, eventId: `case-${identifier}`, user: identifier,
+      payloadSnippet: 'Customer SSN 123-45-6789' }],
+  });
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  const body = await response.json() as {
+    dataMode: string; identifierHandling: string;
+    summary: { totalEvents: number; topRiskUsers?: unknown };
+    assessments: Array<{ inputIndex: number; eventId?: string; payloadHits: { payloadId: string | null } }>;
+  };
+  assert.equal(body.dataMode, 'caller-supplied-unverified');
+  assert.equal(body.identifierHandling, 'user-and-event-identifiers-omitted');
+  assert.equal(body.summary.totalEvents, 1);
+  assert.equal(body.summary.topRiskUsers, undefined);
+  assert.equal(body.assessments[0].inputIndex, 0);
+  assert.equal(body.assessments[0].eventId, undefined);
+  assert.equal(body.assessments[0].payloadHits.payloadId, null);
+  assert.doesNotMatch(JSON.stringify(body), /real\.user@example\.com/);
+
+  const fixture = await get('/api/dashboard/summary');
+  assert.equal((await fixture.json() as { dataMode: string }).dataMode, 'synthetic-demo');
+  const incidents = await get('/api/incidents');
+  assert.equal((await incidents.json() as { dataMode: string }).dataMode, 'synthetic-demo');
+});

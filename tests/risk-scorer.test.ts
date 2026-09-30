@@ -94,6 +94,14 @@ test('assessFleet: aggregates tiers and unsanctioned counts', () => {
   assert.ok(fleet.summary.byTier.critical >= 1);
 });
 
+test('assessFleet: caller department keys cannot alter aggregate prototypes', () => {
+  const fleet = assessFleet([
+    ev({ department: '__proto__', url: 'https://api.deepseek.com/chat/completions' }),
+  ], SANCTIONED);
+  assert.equal(Object.getPrototypeOf(fleet.summary.byDepartment), null);
+  assert.equal(fleet.summary.byDepartment['__proto__'], 1);
+});
+
 test('assessFleet: top risk users sorted by maxScore', () => {
   const events = [
     ev({ eventId: '1', user: 'low@corp.com', department: 'eng', url: 'https://api.anthropic.com/v1/messages' }),

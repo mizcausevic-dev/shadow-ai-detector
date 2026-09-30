@@ -162,8 +162,8 @@ export function assessFleet(events: TrafficEvent[], sanctionedIds: Set<string>):
   const llmAssessments = assessments.filter((a) => a.matched);
 
   const byTier: Record<RiskTier, number> = { minimal: 0, elevated: 0, high: 0, critical: 0 };
-  const byProvider: Record<string, number> = {};
-  const byDepartment: Record<string, number> = {};
+  const byProvider: Record<string, number> = Object.create(null);
+  const byDepartment: Record<string, number> = Object.create(null);
   const userStats = new Map<string, { user: string; department: string; eventCount: number; maxScore: number }>();
   let unsanctionedEvents = 0;
 

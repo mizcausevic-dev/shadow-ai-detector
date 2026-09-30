@@ -33,6 +33,11 @@ endpointsRouter.post('/classify', (req, res) => {
 
 export const analyzeRouter = Router();
 
+analyzeRouter.use((_req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
+
 analyzeRouter.post('/payload', (req, res) => {
   const parsed = ScanPayloadSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: 'Invalid payload', details: parsed.error.issues }); return; }
@@ -50,7 +55,26 @@ analyzeRouter.post('/traffic', (req, res) => {
   if (!parsed.success) { res.status(400).json({ error: 'Invalid payload', details: parsed.error.issues }); return; }
   const fleet = assessFleet(parsed.data.events, SANCTIONED_ENDPOINT_IDS);
   const departments = rollupByDepartment(parsed.data.events, fleet.assessments);
-  res.json({ dataMode: 'synthetic-input-analysis', summary: fleet.summary, departments, assessments: fleet.assessments });
+  const { totalEvents, llmEvents, byTier, byProvider, byDepartment, unsanctionedEvents } = fleet.summary;
+  const assessments = fleet.assessments.map((assessment, inputIndex) => ({
+    inputIndex,
+    matched: assessment.matched,
+    endpointId: assessment.endpointId,
+    provider: assessment.provider,
+    sanctionStatus: assessment.sanctionStatus,
+    riskScore: assessment.riskScore,
+    riskTier: assessment.riskTier,
+    signals: assessment.signals,
+    payloadHits: { ...assessment.payloadHits, payloadId: null },
+    recommendedAction: assessment.recommendedAction,
+  }));
+  res.json({
+    dataMode: 'caller-supplied-unverified',
+    identifierHandling: 'user-and-event-identifiers-omitted',
+    summary: { totalEvents, llmEvents, byTier, byProvider, byDepartment, unsanctionedEvents },
+    departments,
+    assessments,
+  });
 });
 
 export const incidentsRouter = Router();
