@@ -75,7 +75,7 @@ test('assessEvent: non-LLM URL with clean payload is minimal', () => {
 test('assessEvent: AWS creds in OpenAI prompt flagged critical', () => {
   const r = assessEvent(ev({
     url: 'https://api.openai.com/v1/chat/completions',
-    payloadSnippet: 'aws_secret_access_key="abcdef0123456789ABCDEF0123456789abcdefgh"',
+    payloadSnippet: `aws_secret_access_key="${'a'.repeat(40)}"`,
   }), SANCTIONED);
   assert.equal(r.riskTier, 'critical');
   assert.equal(r.payloadHits.shouldBlock, true);
