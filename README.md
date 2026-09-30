@@ -94,7 +94,7 @@ For each fictional department: total events, LLM events, unique users/providers,
 | GET | `/api/dashboard/summary` | Summary of the synthetic demo dataset |
 | GET | `/api/dashboard/exposure` | Department exposure rankings |
 
-The bulk traffic endpoint analyzes caller-supplied events. Its `dataMode` is `caller-supplied-unverified`, and its per-event verdicts use input position for correlation. User rankings, user identifiers, and caller event IDs are omitted from that response. Analysis responses set `Cache-Control: no-store`. The bundled dashboard and incident endpoints remain labeled as synthetic fixtures. The demo has no authentication or tenant isolation; do not submit real employee or secret data.
+The analysis endpoints label caller inputs `caller-supplied-unverified`, omit supplied event, user, host, and payload IDs from responses, and set `Cache-Control: no-store`. Bulk results use input position for correlation and replace department names with request-local labels such as `Department 1`; the labels are not stable across requests. Validation errors do not repeat supplied values. The bundled dashboard and incident endpoints remain labeled as synthetic fixtures. This response redaction does not provide authentication, tenant isolation, or safe handling for real employee or secret data; do not submit such data to the demo.
 
 ## Sample: Single Event Assessment
 
@@ -118,7 +118,9 @@ POST /api/analyze/event
 
 ```json
 {
-  "eventId": "evt_001",
+  "dataMode": "caller-supplied-unverified",
+  "identifierHandling": "caller-identifiers-omitted",
+  "inputIndex": 0,
   "matched": true,
   "endpointId": "deepseek-api",
   "provider": "DeepSeek",
