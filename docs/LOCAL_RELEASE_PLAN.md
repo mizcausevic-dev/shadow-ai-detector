@@ -52,8 +52,8 @@ The supported target is a direct local loopback process only. `npm.cmd start` se
 
 - [x] Inspected source, tests, draft PR baseline, and release configuration.
 - [x] Added local request and production-start boundaries.
-- [ ] Completed all verification and local rollback drill.
-- [ ] Recorded final result and remaining gates.
+- [x] Completed the local verification and candidate-to-prior-reviewed-commit rollback drill.
+- [x] Recorded the remaining production gates in `PRODUCTION_EVIDENCE.md`.
 
 ## Decisions
 
@@ -62,4 +62,8 @@ The supported target is a direct local loopback process only. `npm.cmd start` se
 
 ## Outcome
 
-Pending final verification.
+The implementation commit was `10666152bbc1cda1a47ebd17f290e3214722f99e`. On Node 24 locally, `npm.cmd run build` exited 0, `npm.cmd test` passed 56/56, and `npm.cmd audit --omit=dev --audit-level=moderate` reported zero vulnerabilities. `gitleaks dir --no-banner --redact --exit-code 1 .` reported no findings; this is a single method and does not establish a comprehensive clean audit. An actual `NODE_ENV=production` start exited 1 before listening with the expected refusal.
+
+`pwsh -NoProfile -File scripts/local-release-drill.ps1` exited 0. It started candidate commit `10666152bbc1cda1a47ebd17f290e3214722f99e` on loopback port 61880, received health and `synthetic-demo` fixture responses, stopped it, then started previous reviewed commit `0e6bcee07a7d5415dc8f69929269dfa3dd65cdb0` at the same address and received the same expected health and fixture responses. The drill used an offline npm install for the archived rollback source. No public system was touched.
+
+Production remains blocked by absent authenticated tenant-scoped ingestion, permissioned field data and labels, an approved retention and incident design, production observability, and a target-specific deployment and rollback exercise. CI for the updated draft PR is pending remote verification.
