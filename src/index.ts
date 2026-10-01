@@ -5,6 +5,7 @@ import path from 'path';
 import { env } from './config/env';
 import { isLocalDemoRequest } from './config/local-boundary';
 import { createFeedBoundary, type FeedBoundaryConfig } from './security/feed-boundary';
+import { createFeedQuota } from './security/feed-quota';
 import {
   endpointsRouter,
   analyzeRouter,
@@ -32,13 +33,16 @@ export function createApp(feedBoundary?: FeedBoundaryConfig): express.Express {
   });
   // Authorization runs before body parsing or analysis. The default app denies
   // the route even on loopback; test-only injection exercises the candidate gate.
-  app.use('/api/feed/:resourceId/analyze',
-    feedBoundary ? createFeedBoundary(feedBoundary) : (_req, res) => {
+  if (feedBoundary) {
+    app.use('/api/feed/:resourceId/analyze',
+      createFeedQuota(), createFeedBoundary(feedBoundary),
+      express.json({ limit: '256kb' }), analyzeRouter);
+  } else {
+    app.use('/api/feed/:resourceId/analyze', (_req, res) => {
       res.setHeader('Cache-Control', 'no-store');
       res.status(404).json({ error: 'Not found' });
-    },
-    express.json({ limit: '256kb' }),
-    analyzeRouter);
+    });
+  }
   app.get('/health', (_req, res) => {
     res.json({
       status: 'ok',

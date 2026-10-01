@@ -20,6 +20,7 @@ const fixtureEvent = {
 let privateKey: Awaited<ReturnType<typeof generateKeyPair>>['privateKey'];
 let untrustedPrivateKey: Awaited<ReturnType<typeof generateKeyPair>>['privateKey'];
 let publicKeys: JSONWebKeySet;
+let feedConfig: FeedBoundaryConfig;
 let server: Server;
 let baseUrl: string;
 let defaultServer: Server;
@@ -36,7 +37,7 @@ before(async () => {
   untrustedPrivateKey = (await generateKeyPair('EdDSA')).privateKey;
   privateKey = pair.privateKey;
   publicKeys = { keys: [{ ...(await exportJWK(pair.publicKey)), kid: 'test-key', alg: 'EdDSA', use: 'sig' }] };
-  const config: FeedBoundaryConfig = {
+  feedConfig = {
     issuer, audience, publicKeys,
     isTokenActive: async (principal) => {
       if (statusFails) throw new Error('simulated status outage');
@@ -51,7 +52,7 @@ before(async () => {
       return resourceGrants.get(id)?.has(principal.clientId) ?? false;
     },
   };
-  server = createApp(config).listen(0, '127.0.0.1');
+  server = createApp(feedConfig).listen(0, '127.0.0.1');
   defaultServer = app.listen(0, '127.0.0.1');
   await Promise.all([
     new Promise<void>((resolve) => server.once('listening', resolve)),
@@ -219,4 +220,33 @@ test('invalid identity configuration is rejected before an app is created', () =
   assert.throws(() => createApp({ issuer: 'http://identity.example.test', audience, publicKeys, ...callbacks }));
   assert.throws(() => createApp({ issuer, audience, publicKeys: { keys: [] }, ...callbacks }));
   assert.throws(() => createApp({ issuer, audience, publicKeys: { keys: [{ kty: 'oct', kid: 'test-key' }] }, ...callbacks }));
+});
+
+test('configured feed rejects request bursts before authorization or body parsing', async () => {
+  const isolated = createApp(feedConfig).listen(0, '127.0.0.1');
+  try {
+    await new Promise<void>((resolve) => isolated.once('listening', resolve));
+    const url = `http://127.0.0.1:${(isolated.address() as AddressInfo).port}`;
+    const responses = await Promise.all(Array.from({ length: 100 }, async () => {
+      const response = await fetch(`${url}/api/feed/${resourceId}/analyze/traffic`, {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: '{invalid',
+      });
+      return {
+        status: response.status,
+        cacheControl: response.headers.get('cache-control'),
+        retryAfter: response.headers.get('retry-after'),
+      };
+    }));
+    const statuses = responses.map((response) => response.status);
+    assert.ok(statuses.includes(401), 'requests below the quota still reach authorization');
+    const throttled = responses.find((response) => response.status === 429);
+    assert.ok(throttled, 'malformed JSON in a burst must be throttled before parsing');
+    assert.ok(statuses.every((status) => status === 401 || status === 429));
+    assert.equal(throttled.cacheControl, 'no-store');
+    assert.equal(throttled.retryAfter, '1');
+    assert.equal((await fetch(`${url}/health`)).status, 200);
+  } finally {
+    isolated.closeAllConnections();
+    await new Promise<void>((resolve, reject) => isolated.close((error) => error ? reject(error) : resolve()));
+  }
 });
