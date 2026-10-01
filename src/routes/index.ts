@@ -73,6 +73,9 @@ export const endpointsRouter = Router();
 endpointsRouter.get('/', (_req, res) => {
   const endpoints = listKnownEndpoints();
   res.json({
+    dataMode: 'illustrative-catalog',
+    sanctionedListMode: 'fictional-sample',
+    countryHandling: 'catalog-metadata-not-processing-location',
     catalogSize: endpoints.length,
     sanctionedCount: SANCTIONED_ENDPOINT_IDS.size,
     endpoints,
@@ -147,7 +150,7 @@ incidentsRouter.get('/', (req, res) => {
 incidentsRouter.get('/:id', (req, res) => {
   const i = INCIDENTS.find((x) => x.incidentId === req.params.id);
   if (!i) { res.status(404).json({ error: 'Incident not found' }); return; }
-  res.json(i);
+  res.json({ dataMode: 'synthetic-demo', ...i });
 });
 
 export const dashboardRouter = Router();
@@ -175,5 +178,5 @@ dashboardRouter.get('/summary', (_req, res) => {
 dashboardRouter.get('/exposure', (_req, res) => {
   const fleet = assessFleet(TRAFFIC_EVENTS, SANCTIONED_ENDPOINT_IDS);
   const departments = rollupByDepartment(TRAFFIC_EVENTS, fleet.assessments);
-  res.json({ departments });
+  res.json({ dataMode: 'synthetic-demo', departments });
 });

@@ -45,18 +45,18 @@ The local service binds to `127.0.0.1`. It has no authentication or tenant bound
 
 Each endpoint carries default risk band, source country, capability classification, and notes.
 
-### Payload Scanner — 21 patterns across 6 categories
+### Payload Scanner — 20 patterns across 6 categories
 
 | Category | Patterns | Example signals |
 |---|---|---|
 | `credential` | Private key blocks, AWS access keys, API key prefixes, JWTs, GitHub PATs, Slack tokens, inline passwords |
 | `pii` | US SSN, IBAN, phone, email, DOB markers |
-| `pci` | Credit card patterns, CVV markers |
-| `health` | MRN markers, ICD codes |
+| `pci` | Luhn-valid 16-digit card-like patterns, CVV markers |
+| `health` | MRN markers, explicitly labeled ICD-10 codes |
 | `internal-marker` | CONFIDENTIAL/SECRET/INTERNAL ONLY/RESTRICTED, M&A codename patterns |
 | `source-code` | AWS SDK creds, database connection strings with embedded passwords |
 
-Matches return a fixed `[redacted]` marker and pattern metadata, never a portion of the matched content. The request body is processed in memory by this local demo and is not intentionally logged or stored; production handling would need a reviewed retention and access design.
+Matches return a fixed `[redacted]` marker and pattern metadata, never a portion of the matched content. Luhn and ICD-10 label checks reduce two known false positives, but neither proves a true payment or medical finding. The request body is processed in memory by this local demo and is not intentionally logged or stored; production handling would need a reviewed retention and access design.
 
 ### Risk Scorer — composite per event
 
@@ -84,7 +84,7 @@ For each fictional department: total events, LLM events, unique users/providers,
 | Method | Endpoint | Purpose |
 |---|---|---|
 | GET | `/health` | Service status |
-| GET | `/api/endpoints` | Full LLM catalog + sanctioned list + provider metadata |
+| GET | `/api/endpoints` | Illustrative LLM catalog + fictional sample allowlist + provider metadata |
 | POST | `/api/endpoints/classify` | Classify a single URL/host |
 | POST | `/api/analyze/payload` | Scan a payload for sensitive content |
 | POST | `/api/analyze/event` | Assess a single traffic event end-to-end |
@@ -174,7 +174,7 @@ Visit:
 npm test
 ```
 
-The suite covers endpoint classification, payload scanning, risk scoring, department rollups, API privacy boundaries, input caps, and the preview route.
+The suite covers endpoint classification, payload scanning, risk scoring, department rollups, API privacy boundaries, input caps, and the preview route. A separate hand-labeled synthetic challenge set has 13 endpoint cases and 17 payload cases, including near misses. Passing it guards against these regressions; it does not estimate field precision, recall, or a false-positive rate. Real accuracy validation requires permissioned, representative traffic and human-labeled outcomes.
 
 ## What This Demonstrates
 

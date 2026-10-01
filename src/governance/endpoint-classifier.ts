@@ -84,7 +84,8 @@ function parseUrl(input: string): { host: string; path: string } | null {
   if (!/^https?:\/\//i.test(s)) s = 'https://' + s;
   try {
     const u = new URL(s);
-    return { host: u.hostname.toLowerCase(), path: u.pathname || '/' };
+    // A final DNS root dot is equivalent to the same hostname without it.
+    return { host: u.hostname.toLowerCase().replace(/\.$/, ''), path: u.pathname || '/' };
   } catch {
     return null;
   }

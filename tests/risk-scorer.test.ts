@@ -105,7 +105,7 @@ test('assessFleet: caller department keys cannot alter aggregate prototypes', ()
 test('assessFleet: top risk users sorted by maxScore', () => {
   const events = [
     ev({ eventId: '1', user: 'low@corp.com', department: 'eng', url: 'https://api.anthropic.com/v1/messages' }),
-    ev({ eventId: '2', user: 'crit@corp.com', department: 'sales', url: 'https://chatgpt.com/api', payloadSnippet: 'SSN 123-45-6789 plus AKIAIOSFODNN7EXAMPLE' }),
+    ev({ eventId: '2', user: 'crit@corp.com', department: 'sales', url: 'https://chatgpt.com/api', payloadSnippet: `SSN 123-45-6789 plus AKIA${'A'.repeat(16)}` }),
   ];
   const fleet = assessFleet(events, SANCTIONED);
   assert.equal(fleet.summary.topRiskUsers[0].user, 'crit@corp.com');

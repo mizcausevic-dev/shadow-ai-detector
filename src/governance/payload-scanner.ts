@@ -36,7 +36,7 @@ const PATTERNS: SensitivityPattern[] = [
 
   // Health
   { name: 'mrn', category: 'health', severity: 'high', regex: /\b(?:MRN|medical record (?:number|no\.?))[:\s]+[A-Z0-9-]{6,}/i, description: 'Medical record number.' },
-  { name: 'icd-code', category: 'health', severity: 'medium', regex: /\b(?:ICD[- ]?(?:9|10)[:\s]+)?[A-TV-Z]\d{2}(?:\.\d{1,4})?\b/, description: 'ICD diagnosis code.' },
+  { name: 'icd-code', category: 'health', severity: 'medium', regex: /\bICD[- ]?10[:\s]+[A-TV-Z]\d{2}(?:\.\d{1,4})?\b/i, description: 'Explicitly labeled ICD-10 diagnosis code.' },
 
   // Internal markers
   { name: 'classified-marker', category: 'internal-marker', severity: 'critical', regex: /\b(?:CONFIDENTIAL|SECRET|TOP[- ]SECRET|INTERNAL ONLY|RESTRICTED|FOUO|PROPRIETARY)\b/, description: 'Document classification marker.' },
@@ -66,6 +66,31 @@ export interface PayloadScanResult {
 const SEV_RANK: Record<SensitivitySeverity, number> = { critical: 4, high: 3, medium: 2, low: 1 };
 const REDACTED_MATCH = '[redacted]';
 
+// A 16-digit identifier is not necessarily a card number. Luhn is only a
+// format check; a passing value is still not proof of a real payment card.
+function passesLuhn(candidate: string): boolean {
+  const digits = candidate.replace(/[- ]/g, '');
+  let sum = 0;
+  let double = false;
+  for (let index = digits.length - 1; index >= 0; index--) {
+    let digit = Number(digits[index]);
+    if (double) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+    sum += digit;
+    double = !double;
+  }
+  return sum % 10 === 0;
+}
+
+function hasLuhnCard(payload: string, pattern: RegExp): boolean {
+  for (const match of payload.matchAll(new RegExp(pattern.source, `${pattern.flags}g`))) {
+    if (passesLuhn(match[0])) return true;
+  }
+  return false;
+}
+
 export function scanPayload(payload: string, payloadId: string | null = null): PayloadScanResult {
   const hits: SensitivityHit[] = [];
   let highestSeverity: SensitivitySeverity | null = null;
@@ -74,8 +99,8 @@ export function scanPayload(payload: string, payloadId: string | null = null): P
   };
 
   for (const p of PATTERNS) {
-    const m = payload.match(p.regex);
-    if (m) {
+    const matched = p.name === 'credit-card' ? hasLuhnCard(payload, p.regex) : p.regex.test(payload);
+    if (matched) {
       hits.push({
         patternName: p.name,
         category: p.category,

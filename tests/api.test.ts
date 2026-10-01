@@ -38,6 +38,27 @@ test('dashboard summary is explicitly synthetic', async () => {
   assert.ok(body.fleet.totalEvents > 0);
 });
 
+test('catalog and all fixture routes disclose their source boundary', async () => {
+  const catalog = await get('/api/endpoints');
+  assert.equal(catalog.status, 200);
+  const catalogBody = await catalog.json() as {
+    dataMode: string; sanctionedListMode: string; countryHandling: string;
+    providers: Array<{ notes: string }>;
+  };
+  assert.equal(catalogBody.dataMode, 'illustrative-catalog');
+  assert.equal(catalogBody.sanctionedListMode, 'fictional-sample');
+  assert.equal(catalogBody.countryHandling, 'catalog-metadata-not-processing-location');
+  assert.ok(catalogBody.providers.every((provider) => !/sanctioned for production|export-control concern|eu-hosted/i.test(provider.notes)));
+
+  const incidents = await get('/api/incidents');
+  const incidentList = await incidents.json() as { incidents: Array<{ incidentId: string }> };
+  assert.ok(incidentList.incidents.length > 0);
+  const incident = await get(`/api/incidents/${encodeURIComponent(incidentList.incidents[0].incidentId)}`);
+  assert.equal((await incident.json() as { dataMode: string }).dataMode, 'synthetic-demo');
+  const exposure = await get('/api/dashboard/exposure');
+  assert.equal((await exposure.json() as { dataMode: string }).dataMode, 'synthetic-demo');
+});
+
 test('preview serves the API-backed synthetic fixture console', async () => {
   const response = await get('/preview');
   assert.equal(response.status, 200);
@@ -57,14 +78,15 @@ test('callers cannot override the sanctioned endpoint list', async () => {
 });
 
 test('payload result never returns secret fragments', async () => {
+  const syntheticGitHubToken = `ghp_${'a'.repeat(36)}`;
   const response = await post('/api/analyze/payload', {
-    payload: 'GH_TOKEN=ghp_aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789',
+    payload: `GH_TOKEN=${syntheticGitHubToken}`,
   });
   assert.equal(response.status, 200);
   const body = await response.json() as { hits: { matchedSnippet: string }[] };
   assert.ok(body.hits.length > 0);
   assert.ok(body.hits.every((hit: { matchedSnippet: string }) => hit.matchedSnippet === '[redacted]'));
-  assert.doesNotMatch(JSON.stringify(body), /aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789/);
+  assert.equal(JSON.stringify(body).includes(syntheticGitHubToken), false);
 });
 
 test('payload scan never reflects a caller-provided correlation ID', async () => {
