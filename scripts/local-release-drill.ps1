@@ -13,6 +13,7 @@ $candidateProcess = $null
 $rollbackProcess = $null
 $oldPort = $env:PORT
 $oldNodeEnv = $env:NODE_ENV
+$oldLocalFixture = $env:SHADOW_LOCAL_FIXTURE
 
 function Wait-Health([int]$port, [System.Diagnostics.Process]$process) {
   for ($attempt = 0; $attempt -lt 40; $attempt++) {
@@ -74,6 +75,7 @@ try {
   $listener.Stop()
   $env:PORT = [string]$port
   $env:NODE_ENV = 'development'
+  $env:SHADOW_LOCAL_FIXTURE = '1'
   $nodePath = (Get-Command node.exe).Source
 
   $candidateProcess = Start-Process -FilePath $nodePath -ArgumentList 'dist/index.js' -WorkingDirectory $repoRoot -PassThru -WindowStyle Hidden -RedirectStandardOutput (Join-Path $drillRoot 'candidate.out') -RedirectStandardError (Join-Path $drillRoot 'candidate.err')
@@ -93,6 +95,7 @@ try {
   Stop-DrillProcess $rollbackProcess
   $env:PORT = $oldPort
   $env:NODE_ENV = $oldNodeEnv
+  $env:SHADOW_LOCAL_FIXTURE = $oldLocalFixture
   $resolvedDrill = [System.IO.Path]::GetFullPath($drillRoot)
   if ($resolvedDrill.StartsWith($tempRoot, [System.StringComparison]::OrdinalIgnoreCase) -and
       [System.IO.Path]::GetFileName($resolvedDrill) -like 'shadow-ai-release-drill-*' -and

@@ -94,10 +94,16 @@ test('local demo rejects foreign Host and selected forwarding headers before rou
   assert.equal(foreignHost.cacheControl, 'no-store');
   assert.doesNotMatch(foreignHost.body, /uptimeSeconds/);
 
+  for (const host of ['localhost.evil.example', 'localhost:0', 'localhost:65536']) {
+    assert.equal((await getWithHeaders('/health', { host })).status, 403, host);
+  }
+
   for (const [header, value] of Object.entries({
     forwarded: 'for=203.0.113.7',
     'x-forwarded-for': '203.0.113.7',
     'x-forwarded-host': 'attacker.example',
+    'x-forwarded-proto': 'https',
+    via: '1.1 proxy.example',
   })) {
     const forwarded = await getWithHeaders('/api/dashboard/summary', { [header]: value });
     assert.equal(forwarded.status, 403, header);
@@ -115,10 +121,12 @@ test('local demo rejects foreign Host and selected forwarding headers before rou
 });
 
 test('production runtime cannot start the unauthenticated demo', () => {
-  assert.equal(canStartLocalDemo('development'), true);
-  assert.equal(canStartLocalDemo('test'), true);
-  assert.equal(canStartLocalDemo('production'), false);
-  assert.equal(canStartLocalDemo('staging'), false);
+  assert.equal(canStartLocalDemo('development', true), true);
+  assert.equal(canStartLocalDemo('test', true), true);
+  assert.equal(canStartLocalDemo(undefined, true), false);
+  assert.equal(canStartLocalDemo('development', false), false);
+  assert.equal(canStartLocalDemo('production', true), false);
+  assert.equal(canStartLocalDemo('staging', true), false);
 });
 
 test('a remote peer cannot bypass the local boundary with a forged Host', () => {

@@ -4,7 +4,7 @@ This repository supports a local synthetic demonstration only. Its public draft 
 
 ## Identity and tenant boundary
 
-Before any reachable service is considered, choose a trusted identity provider and explicit tenant ownership. The service must validate issuer, audience, signature, expiry, and requested scope; derive tenant from the verified identity rather than request data; reject cross-tenant reads and writes; and test those failures at the deployed boundary. No provider, credentials, tenant registry, or permission grants are configured here. The current direct-loopback restriction is containment, not authentication.
+Before any reachable service is considered, choose a trusted identity provider and explicit tenant ownership. The service must validate issuer, audience, signature, expiry, and requested scope; derive tenant from the verified identity rather than request data; reject cross-tenant reads and writes; and test those failures at the deployed boundary. No provider, credentials, tenant registry, or permission grants are configured here. The current loopback and explicit fixture opt-in restriction is containment, not authentication. A same-host proxy that rewrites headers can still expose this app.
 
 ## Data and privacy boundary
 

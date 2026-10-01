@@ -2,7 +2,7 @@
 
 ## Goal
 
-Prove that this synthetic detector can be started and rolled back on loopback without exposing its unauthenticated analysis API. Keep production use blocked until identity, data, and accuracy evidence exists.
+Prove that this synthetic detector can be started and rolled back on loopback while rejecting direct remote requests and accidental startup. Keep production use blocked until identity, data, and accuracy evidence exists.
 
 ## Current state
 
@@ -10,8 +10,8 @@ At the start of this work, draft PR #17 was at `0e6bcee`. The app bound `127.0.0
 
 ## Scope
 
-- Add a request-level direct-loopback boundary and reject foreign Host, foreign Origin, `Forwarded`, `X-Forwarded-For`, and `X-Forwarded-Host` requests before JSON parsing.
-- Refuse `NODE_ENV=production` startup while authentication and tenant controls are absent.
+- Add a request-level direct-loopback boundary and reject foreign Host, foreign Origin, `Forwarded`, `X-Forwarded-For`, `X-Forwarded-Host`, `X-Forwarded-Proto`, and `Via` requests before JSON parsing.
+- Require an explicit development/test mode and `SHADOW_LOCAL_FIXTURE=1`; refuse missing, staging, or production mode and invalid ports.
 - Test the boundary and rehearse candidate-to-reviewed-commit rollback locally with synthetic data.
 - Record the evidence still required for field accuracy and a production deployment.
 
@@ -20,18 +20,18 @@ No live feed, real employee/payload data, identity provider, production credenti
 ## Acceptance criteria
 
 1. Direct loopback health and synthetic fixture routes work.
-2. Foreign Host, foreign Origin, `Forwarded`, `X-Forwarded-For`, and `X-Forwarded-Host` requests receive `403` without response data.
-3. Production startup refuses to listen.
+2. Foreign Host, foreign Origin, `Forwarded`, `X-Forwarded-For`, `X-Forwarded-Host`, `X-Forwarded-Proto`, and `Via` requests receive `403` without response data.
+3. Missing mode, missing fixture opt-in, staging/production mode, and invalid ports refuse startup.
 4. Build, test suite, and dependency audit pass at the changed head.
 5. A local process using the candidate artifact can be replaced at the same loopback address by the previous reviewed artifact, and the prior artifact's health route responds.
 
 ## Risks and release class
 
-This work is an R0 local-only demonstration. Exposing the analysis API with real traffic would be R3 or R4, depending on data and enforcement. The principal risks are accidental network exposure, raw payload intake, false findings, and an unsafe rollback to `main`.
+This work is an R0 local-only demonstration. Exposing the analysis API with real traffic would be R3 or R4, depending on data and enforcement. The principal risks are accidental network exposure, raw payload intake, false findings, and an unsafe rollback to `main`. A same-host proxy can rewrite headers and present as a loopback peer; this boundary is not proxy-proof.
 
 ## Design
 
-Require an exact local Host header, a loopback socket peer, no `Forwarded`, `X-Forwarded-For`, or `X-Forwarded-Host` header, and a same-origin Origin if one is present. Check this before body parsing. Keep the existing `127.0.0.1` listen address and reject production startup. This is a containment measure, not an authentication or tenant design.
+Require an exact local Host header, a loopback socket peer, no `Forwarded`, `X-Forwarded-For`, `X-Forwarded-Host`, `X-Forwarded-Proto`, or `Via` header, and a same-origin Origin if one is present. Check this before body parsing. Keep the existing `127.0.0.1` listen address. Startup additionally requires an explicit development/test mode and `SHADOW_LOCAL_FIXTURE=1`. This is a containment measure, not an authentication or tenant design.
 
 ## Execution sequence
 
@@ -46,7 +46,7 @@ Run `npm.cmd run build`, `npm.cmd test`, `npm.cmd audit --omit=dev --audit-level
 
 ## Deployment and rollback
 
-The supported target is a direct local loopback process only. `npm.cmd start` serves the compiled candidate. The drill uses a separate archive of the prior reviewed commit as a local rollback artifact, not `origin/main`. A production deploy command, URL, health check, and rollback target remain undefined and therefore blocked.
+The supported target is a direct local loopback process only. With `NODE_ENV=development` and `SHADOW_LOCAL_FIXTURE=1` explicitly set, `npm.cmd start` serves the compiled candidate. The drill uses a separate archive of the prior reviewed commit as a local rollback artifact, not `origin/main`. A production deploy command, URL, health check, and rollback target remain undefined and therefore blocked.
 
 ## Progress
 
@@ -67,3 +67,5 @@ The implementation commit was `10666152bbc1cda1a47ebd17f290e3214722f99e`. On Nod
 The initial `pwsh -NoProfile -File scripts/local-release-drill.ps1` success used candidate commit `10666152bbc1cda1a47ebd17f290e3214722f99e` and loopback port 61880. After correcting the drill to build the candidate itself, the same command exited 0 at later commit `bcd2f15d945c8d9dafc7875b81d4b67e4b782d77` on port 49678. That run built the candidate and an offline archived copy of previous reviewed PR commit `0e6bcee07a7d5415dc8f69929269dfa3dd65cdb0`, received health and `synthetic-demo` fixture responses from the candidate, stopped it, then received those responses from the previous commit at the same address. The previous commit is a local drill artifact, not a production rollback artifact. No public system was touched.
 
 At `bcd2f15d945c8d9dafc7875b81d4b67e4b782d77`, GitHub's Node 20, Node 22, and CodeQL checks succeeded. These are dated observations, not a claim about a later PR head; check draft PR #17's live head and checks before a release decision. Production remains blocked by absent authenticated tenant-scoped ingestion, permissioned field data and labels, an approved retention and incident design, production observability, and a target-specific deployment and rollback exercise.
+
+Subsequent startup hardening requires the explicit fixture opt-in, validates `PORT`, and exercises missing-mode and missing-opt-in refusal through the compiled entry point. `npm.cmd test` passed 59/59 locally on Node 24 before the follow-up commit. The mutable PR description records the latest committed-head drill and remote check results.

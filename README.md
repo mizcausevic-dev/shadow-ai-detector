@@ -15,7 +15,7 @@ An egress review needs to connect destination classification and payload indicat
 
 The API accepts caller-supplied example traffic; it does not ingest a live stream. It classifies against a static catalog, scans supplied text for sensitivity patterns, and computes sample department rollups. Every output requires human validation before an incident or policy decision.
 
-The local service binds to `127.0.0.1` and rejects requests that do not arrive directly from loopback with a local Host header. `NODE_ENV=production` startup is disabled. It has no authentication or tenant boundary and is not suitable for public hosting, reverse proxies, or tunnels.
+The local service binds to `127.0.0.1` and requires an explicit `NODE_ENV=development` or `test` plus `SHADOW_LOCAL_FIXTURE=1` to start. It rejects non-loopback socket peers, foreign Host/Origin values, and the `Forwarded`, `X-Forwarded-For`, `X-Forwarded-Host`, `X-Forwarded-Proto`, and `Via` headers. This is containment, not authentication: a same-host proxy that rewrites headers can still expose it. Do not put it behind a proxy or tunnel or submit real data.
 
 ## Where This Sits in the Portfolio
 
@@ -143,7 +143,7 @@ POST /api/analyze/event
 
 ![Local Shadow AI Detector preview populated from the synthetic API fixture](docs/hero.png)
 
-This is a Chrome capture of `/preview` against the running local API. The page fetches `/api/dashboard/summary` and `/api/incidents`; it does not show a live enterprise network. Recreate it with `npm run build`, `npm start`, then open `http://127.0.0.1:3000/preview`.
+This is a Chrome capture of `/preview` against the running local API. The page fetches `/api/dashboard/summary` and `/api/incidents`; it does not show a live enterprise network. After setting the local fixture environment variables below, recreate it with `npm.cmd run build`, `npm.cmd start`, then open `http://127.0.0.1:3000/preview`.
 
 ## Getting Started
 
@@ -154,12 +154,16 @@ This is a Chrome capture of `/preview` against the running local API. The page f
 
 ### Setup
 
-```bash
+```powershell
 git clone https://github.com/mizcausevic-dev/shadow-ai-detector.git
-cd shadow-ai-detector
-npm ci
-npm run dev
+Set-Location shadow-ai-detector
+npm.cmd ci
+$env:NODE_ENV = 'development'
+$env:SHADOW_LOCAL_FIXTURE = '1'
+npm.cmd run dev
 ```
+
+On macOS or Linux, use `NODE_ENV=development SHADOW_LOCAL_FIXTURE=1 npm run dev`. The opt-in enables only the local synthetic fixture; it is not a credential or permission grant. Missing or unsupported mode, missing opt-in, or an invalid `PORT` refuses startup.
 
 Visit:
 

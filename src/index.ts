@@ -3,7 +3,7 @@ import helmet from 'helmet';
 import { readFileSync } from 'fs';
 import path from 'path';
 import { env } from './config/env';
-import { canStartLocalDemo, isLocalDemoRequest } from './config/local-boundary';
+import { isLocalDemoRequest } from './config/local-boundary';
 import {
   endpointsRouter,
   analyzeRouter,
@@ -65,9 +65,6 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
 });
 
 if (require.main === module) {
-  if (!canStartLocalDemo(env.nodeEnv)) {
-    throw new Error('Production startup is disabled for this unauthenticated synthetic demo.');
-  }
   app.listen(env.port, '127.0.0.1', () => {
     // eslint-disable-next-line no-console
     console.log(`shadow-ai-detector listening on :${env.port}`);
