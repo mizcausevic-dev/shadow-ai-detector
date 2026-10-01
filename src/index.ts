@@ -3,6 +3,7 @@ import helmet from 'helmet';
 import { readFileSync } from 'fs';
 import path from 'path';
 import { env } from './config/env';
+import { canStartLocalDemo, isLocalDemoRequest } from './config/local-boundary';
 import {
   endpointsRouter,
   analyzeRouter,
@@ -11,11 +12,20 @@ import {
 } from './routes/index';
 
 export const app = express();
+app.disable('x-powered-by');
 const startedAt = Date.now();
 const previewHtml = readFileSync(path.join(__dirname, '..', 'dashboard-preview', 'index.html'), 'utf8');
 const previewScript = readFileSync(path.join(__dirname, '..', 'dashboard-preview', 'preview.js'), 'utf8');
 
 app.use(helmet());
+app.use((req, res, next) => {
+  if (!isLocalDemoRequest(req)) {
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(403).json({ error: 'Local synthetic demo only' });
+    return;
+  }
+  next();
+});
 // A local fixture API. No request URL or payload is logged; both may contain
 // sensitive material when callers exercise the scanner.
 app.use(express.json({ limit: '256kb' }));
@@ -55,6 +65,9 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
 });
 
 if (require.main === module) {
+  if (!canStartLocalDemo(env.nodeEnv)) {
+    throw new Error('Production startup is disabled for this unauthenticated synthetic demo.');
+  }
   app.listen(env.port, '127.0.0.1', () => {
     // eslint-disable-next-line no-console
     console.log(`shadow-ai-detector listening on :${env.port}`);

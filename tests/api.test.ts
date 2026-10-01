@@ -1,8 +1,10 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { AddressInfo } from 'node:net';
-import type { Server } from 'node:http';
+import { request as httpRequest, type Server } from 'node:http';
 import { app } from '../src/index';
+import type { Request } from 'express';
+import { canStartLocalDemo, isLocalDemoRequest } from '../src/config/local-boundary';
 
 let server: Server;
 let baseUrl: string;
@@ -19,6 +21,25 @@ const post = (path: string, body: unknown) => fetch(new URL(path, baseUrl), {
   headers: { 'content-type': 'application/json' },
   body: JSON.stringify(body),
 });
+
+function getWithHeaders(path: string, headers: Record<string, string>): Promise<{
+  status: number | undefined; body: string; cacheControl: string | undefined;
+}> {
+  return new Promise((resolve, reject) => {
+    const request = httpRequest(new URL(path, baseUrl), { headers }, (response) => {
+      let body = '';
+      response.setEncoding('utf8');
+      response.on('data', (chunk: string) => { body += chunk; });
+      response.on('end', () => resolve({
+        status: response.statusCode,
+        body,
+        cacheControl: response.headers['cache-control'],
+      }));
+    });
+    request.on('error', reject);
+    request.end();
+  });
+}
 
 const event = {
   eventId: 'fixture_1', timestamp: '2026-05-07T12:00:00Z',
@@ -65,6 +86,43 @@ test('preview serves the API-backed synthetic fixture console', async () => {
   const html = await response.text();
   assert.match(html, /SYNTHETIC FIXTURE/);
   assert.match(html, /\/preview\.js/);
+});
+
+test('local demo rejects foreign Host and proxy headers before routing', async () => {
+  const foreignHost = await getWithHeaders('/health', { host: 'attacker.example' });
+  assert.equal(foreignHost.status, 403);
+  assert.equal(foreignHost.cacheControl, 'no-store');
+  assert.doesNotMatch(foreignHost.body, /uptimeSeconds/);
+
+  const forwarded = await getWithHeaders('/api/dashboard/summary', {
+    'x-forwarded-host': 'attacker.example',
+  });
+  assert.equal(forwarded.status, 403);
+
+  const crossOrigin = await fetch(new URL('/api/analyze/payload', baseUrl), {
+    method: 'POST',
+    headers: { origin: 'https://attacker.example', 'content-type': 'application/json' },
+    body: JSON.stringify({ payload: 'synthetic only' }),
+  });
+  assert.equal(crossOrigin.status, 403);
+
+  const local = await get('/health');
+  assert.equal(local.status, 200);
+});
+
+test('production runtime cannot start the unauthenticated demo', () => {
+  assert.equal(canStartLocalDemo('development'), true);
+  assert.equal(canStartLocalDemo('test'), true);
+  assert.equal(canStartLocalDemo('production'), false);
+  assert.equal(canStartLocalDemo('staging'), false);
+});
+
+test('a remote peer cannot bypass the local boundary with a forged Host', () => {
+  const request = {
+    headers: { host: 'localhost:3000' },
+    socket: { remoteAddress: '203.0.113.7' },
+  } as unknown as Request;
+  assert.equal(isLocalDemoRequest(request), false);
 });
 
 test('callers cannot override the sanctioned endpoint list', async () => {

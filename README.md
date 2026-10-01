@@ -15,7 +15,7 @@ An egress review needs to connect destination classification and payload indicat
 
 The API accepts caller-supplied example traffic; it does not ingest a live stream. It classifies against a static catalog, scans supplied text for sensitivity patterns, and computes sample department rollups. Every output requires human validation before an incident or policy decision.
 
-The local service binds to `127.0.0.1`. It has no authentication or tenant boundary and is not suitable for public hosting.
+The local service binds to `127.0.0.1` and rejects requests that do not arrive directly from loopback with a local Host header. `NODE_ENV=production` startup is disabled. It has no authentication or tenant boundary and is not suitable for public hosting, reverse proxies, or tunnels.
 
 ## Where This Sits in the Portfolio
 
@@ -188,6 +188,8 @@ The suite covers endpoint classification, payload scanning, risk scoring, depart
 ## Production gates
 
 Before any deployment beyond loopback: add authenticated and tenant-scoped ingestion, a server-owned sanctioned list, approved endpoint and region metadata, rate limits, privacy review for payload and user identifiers, retention/deletion controls, secure logging, and validated incident workflow. This repository does not block egress or create real incidents.
+
+The evidence needed to evaluate those gates is listed in [docs/PRODUCTION_EVIDENCE.md](docs/PRODUCTION_EVIDENCE.md). The [local release plan](docs/LOCAL_RELEASE_PLAN.md) records the synthetic-only rollback rehearsal; it does not prove a production rollback.
 
 ## Future Enhancements
 
