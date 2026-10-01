@@ -43,6 +43,12 @@ try {
   $changes = & git -c "safe.directory=$safeRepo" status --porcelain
   if ($LASTEXITCODE -ne 0 -or $changes) { throw 'Candidate working tree must be clean.' }
 
+  Push-Location $repoRoot
+  try {
+    & npm.cmd run build
+    if ($LASTEXITCODE -ne 0) { throw 'Candidate build failed.' }
+  } finally { Pop-Location }
+
   $archivePath = Join-Path $drillRoot 'rollback.zip'
   & git -c "safe.directory=$safeRepo" archive --format=zip $rollbackSha -o $archivePath
   if ($LASTEXITCODE -ne 0) { throw 'Rollback archive failed.' }
