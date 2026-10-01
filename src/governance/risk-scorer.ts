@@ -1,6 +1,6 @@
 // Composite shadow-AI risk scoring. Combines endpoint classification,
 // payload sensitivity, user identity context, and volume signals into a
-// single CISO-readable risk score per traffic event.
+// illustrative triage score per traffic event. No enforcement occurs.
 
 import { classifyEndpoint, sanctionStatus, type SanctionStatus } from './endpoint-classifier';
 import { scanPayload } from './payload-scanner';
@@ -87,11 +87,11 @@ export function assessEvent(event: TrafficEvent, sanctionedIds: Set<string>): Ri
 
     // Sanction posture
     score += SANCTION_PENALTY[sanction];
-    if (sanction === 'unsanctioned') signals.push(`Endpoint not on org sanctioned list.`);
-    if (sanction === 'unknown') signals.push(`Endpoint sanctioning unknown.`);
+    if (sanction === 'unsanctioned') signals.push('Endpoint not on the sample allowlist.');
+    if (sanction === 'unknown') signals.push('Sample allowlist status unknown.');
     if (classification.notes) signals.push(classification.notes);
     if (classification.sourceCountry && ['CN', 'RU'].includes(classification.sourceCountry)) {
-      signals.push(`Provider hosted in ${classification.sourceCountry}; data residency / export-control concern.`);
+      signals.push(`Catalog country is ${classification.sourceCountry}; verify actual processing location and applicable transfer rules.`);
       score += 15;
     }
   }
@@ -102,7 +102,7 @@ export function assessEvent(event: TrafficEvent, sanctionedIds: Set<string>): Ri
     signals.push(`${hit.category} pattern detected: ${hit.patternName} (${hit.severity}).`);
   }
   if (payloadResult.shouldBlock) {
-    signals.push('Payload contains content recommended for block.');
+    signals.push('Payload contains a pattern requiring human review before any block decision.');
   }
 
   // Volume signal — large uploads to LLM endpoints are noteworthy
@@ -118,16 +118,16 @@ export function assessEvent(event: TrafficEvent, sanctionedIds: Set<string>): Ri
   let recommendedAction: string;
   if (score >= 75) {
     riskTier = 'critical';
-    recommendedAction = 'Block egress; alert CISO + user manager; preserve traffic for forensics.';
+    recommendedAction = 'Review for possible egress block and escalation; validate the finding and retention basis first.';
   } else if (score >= 50) {
     riskTier = 'high';
-    recommendedAction = 'Quarantine session; require justification from user; notify dept owner.';
+    recommendedAction = 'Review whether session quarantine or department follow-up is warranted.';
   } else if (score >= 25) {
     riskTier = 'elevated';
-    recommendedAction = 'Log for weekly review; check user against sanctioned-tools register.';
+    recommendedAction = 'Review against the approved-tools register and local policy.';
   } else {
     riskTier = 'minimal';
-    recommendedAction = 'No action; normal sanctioned traffic.';
+    recommendedAction = 'No pattern flagged in this sample; continue normal monitoring.';
   }
 
   return {
@@ -162,8 +162,8 @@ export function assessFleet(events: TrafficEvent[], sanctionedIds: Set<string>):
   const llmAssessments = assessments.filter((a) => a.matched);
 
   const byTier: Record<RiskTier, number> = { minimal: 0, elevated: 0, high: 0, critical: 0 };
-  const byProvider: Record<string, number> = {};
-  const byDepartment: Record<string, number> = {};
+  const byProvider: Record<string, number> = Object.create(null);
+  const byDepartment: Record<string, number> = Object.create(null);
   const userStats = new Map<string, { user: string; department: string; eventCount: number; maxScore: number }>();
   let unsanctionedEvents = 0;
 
