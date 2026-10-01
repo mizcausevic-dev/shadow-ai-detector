@@ -107,6 +107,8 @@ test('local demo rejects foreign Host and selected forwarding headers before rou
   })) {
     const forwarded = await getWithHeaders('/api/dashboard/summary', { [header]: value });
     assert.equal(forwarded.status, 403, header);
+    const emptyForwarded = await getWithHeaders('/api/dashboard/summary', { [header]: '' });
+    assert.equal(emptyForwarded.status, 403, `${header} with an empty value`);
   }
 
   const crossOrigin = await fetch(new URL('/api/analyze/payload', baseUrl), {
@@ -115,6 +117,7 @@ test('local demo rejects foreign Host and selected forwarding headers before rou
     body: JSON.stringify({ payload: 'synthetic only' }),
   });
   assert.equal(crossOrigin.status, 403);
+  assert.equal((await getWithHeaders('/health', { origin: '' })).status, 403);
 
   const local = await get('/health');
   assert.equal(local.status, 200);
