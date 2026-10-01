@@ -1,7 +1,7 @@
 # Shadow AI Detector
 
 [![CI](https://github.com/mizcausevic-dev/shadow-ai-detector/actions/workflows/ci.yml/badge.svg)](https://github.com/mizcausevic-dev/shadow-ai-detector/actions/workflows/ci.yml)
-[![Node](https://img.shields.io/badge/node-20%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org)
+[![Node](https://img.shields.io/badge/node-20.19%2B%20%7C%2022.12%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/typescript-5.6-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![License: MIT](https://img.shields.io/badge/license-MIT-66FCF1)](LICENSE)
 
@@ -16,6 +16,8 @@ An egress review needs to connect destination classification and payload indicat
 The API accepts caller-supplied example traffic; it does not ingest a live stream. It classifies against a static catalog, scans supplied text for sensitivity patterns, and computes sample department rollups. Every output requires human validation before an incident or policy decision.
 
 The local service binds to `127.0.0.1` and requires an explicit `NODE_ENV=development` or `test` plus `SHADOW_LOCAL_FIXTURE=1` to start. It rejects non-loopback socket peers, foreign Host/Origin values, and the `Forwarded`, `X-Forwarded-For`, `X-Forwarded-Host`, `X-Forwarded-Proto`, and `Via` headers. This is containment, not authentication: a same-host proxy that rewrites headers can still expose it. Do not put it behind a proxy or tunnel or submit real data.
+
+An injectable feed authorization path now exercises signed, short-lived access-token verification and server-owned resource ownership and client grants in tests. The normal service does not configure that path: `/api/feed/:resourceId/analyze/payload`, `/event`, and `/traffic` return 404. An injected test app serves those paths only after checking an Ed25519 signature, exact issuer and audience, token type, age, expiry, scope, active-token status, resource tenant, and a grant for the signed `client_id` and exact resource. In that test app, the public fixture and `/api/analyze` routes are absent. No identity provider, revocation store, tenant registry, grant store, live feed, or production listener is configured. A future issuer must provide trustworthy `client_id` semantics before this can be integrated. See [the feed auth plan](docs/FEED_AUTH_PLAN.md) and [remaining evidence](docs/PRODUCTION_EVIDENCE.md).
 
 ## Where This Sits in the Portfolio
 
@@ -149,7 +151,7 @@ This is a Chrome capture of `/preview` against the running local API. The page f
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 20.19+ or 22.12+ (Node 24+ is also supported by the declared engine range)
 - npm
 
 ### Setup
@@ -191,7 +193,7 @@ The suite covers endpoint classification, payload scanning, risk scoring, depart
 
 ## Production gates
 
-Before any deployment beyond loopback: add authenticated and tenant-scoped ingestion, a server-owned sanctioned list, approved endpoint and region metadata, rate limits, privacy review for payload and user identifiers, retention/deletion controls, secure logging, and validated incident workflow. This repository does not block egress or create real incidents.
+Before any deployment beyond loopback: configure and verify the issuer, pinned public keys, active-token/revocation check, server-owned resource registry, and caller-to-resource grants against a private target; add a permissioned ingestion contract, a server-owned sanctioned list, approved endpoint and region metadata, rate limits, privacy review for payload and user identifiers, retention/deletion controls, secure logging, and validated incident workflow. This repository does not block egress or create real incidents.
 
 The evidence needed to evaluate those gates is listed in [docs/PRODUCTION_EVIDENCE.md](docs/PRODUCTION_EVIDENCE.md). The [local release plan](docs/LOCAL_RELEASE_PLAN.md) records the synthetic-only rollback rehearsal; it does not prove a production rollback.
 
