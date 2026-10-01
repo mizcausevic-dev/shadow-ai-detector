@@ -88,16 +88,20 @@ test('preview serves the API-backed synthetic fixture console', async () => {
   assert.match(html, /\/preview\.js/);
 });
 
-test('local demo rejects foreign Host and proxy headers before routing', async () => {
+test('local demo rejects foreign Host and selected forwarding headers before routing', async () => {
   const foreignHost = await getWithHeaders('/health', { host: 'attacker.example' });
   assert.equal(foreignHost.status, 403);
   assert.equal(foreignHost.cacheControl, 'no-store');
   assert.doesNotMatch(foreignHost.body, /uptimeSeconds/);
 
-  const forwarded = await getWithHeaders('/api/dashboard/summary', {
+  for (const [header, value] of Object.entries({
+    forwarded: 'for=203.0.113.7',
+    'x-forwarded-for': '203.0.113.7',
     'x-forwarded-host': 'attacker.example',
-  });
-  assert.equal(forwarded.status, 403);
+  })) {
+    const forwarded = await getWithHeaders('/api/dashboard/summary', { [header]: value });
+    assert.equal(forwarded.status, 403, header);
+  }
 
   const crossOrigin = await fetch(new URL('/api/analyze/payload', baseUrl), {
     method: 'POST',

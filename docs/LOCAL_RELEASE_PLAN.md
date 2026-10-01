@@ -10,7 +10,7 @@ At the start of this work, draft PR #17 was at `0e6bcee`. The app bound `127.0.0
 
 ## Scope
 
-- Add a request-level direct-loopback boundary and reject proxy/foreign-origin requests before JSON parsing.
+- Add a request-level direct-loopback boundary and reject foreign Host, foreign Origin, `Forwarded`, `X-Forwarded-For`, and `X-Forwarded-Host` requests before JSON parsing.
 - Refuse `NODE_ENV=production` startup while authentication and tenant controls are absent.
 - Test the boundary and rehearse candidate-to-reviewed-commit rollback locally with synthetic data.
 - Record the evidence still required for field accuracy and a production deployment.
@@ -20,7 +20,7 @@ No live feed, real employee/payload data, identity provider, production credenti
 ## Acceptance criteria
 
 1. Direct loopback health and synthetic fixture routes work.
-2. Foreign Host, forwarded proxy, and cross-origin requests receive `403` without response data.
+2. Foreign Host, foreign Origin, `Forwarded`, `X-Forwarded-For`, and `X-Forwarded-Host` requests receive `403` without response data.
 3. Production startup refuses to listen.
 4. Build, test suite, and dependency audit pass at the changed head.
 5. A local process using the candidate artifact can be replaced at the same loopback address by the previous reviewed artifact, and the prior artifact's health route responds.
@@ -31,7 +31,7 @@ This work is an R0 local-only demonstration. Exposing the analysis API with real
 
 ## Design
 
-Require an exact local Host header, a loopback socket peer, no forwarding headers, and a same-origin Origin if one is present. Check this before body parsing. Keep the existing `127.0.0.1` listen address and reject production startup. This is a containment measure, not an authentication or tenant design.
+Require an exact local Host header, a loopback socket peer, no `Forwarded`, `X-Forwarded-For`, or `X-Forwarded-Host` header, and a same-origin Origin if one is present. Check this before body parsing. Keep the existing `127.0.0.1` listen address and reject production startup. This is a containment measure, not an authentication or tenant design.
 
 ## Execution sequence
 
