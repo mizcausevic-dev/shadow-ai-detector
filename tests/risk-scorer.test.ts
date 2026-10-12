@@ -75,7 +75,7 @@ test('assessEvent: non-LLM URL with clean payload is minimal', () => {
 test('assessEvent: AWS creds in OpenAI prompt flagged critical', () => {
   const r = assessEvent(ev({
     url: 'https://api.openai.com/v1/chat/completions',
-    payloadSnippet: 'aws_secret_access_key="abcdef0123456789ABCDEF0123456789abcdefgh"',
+    payloadSnippet: `aws_secret_access_key="${'a'.repeat(40)}"`,
   }), SANCTIONED);
   assert.equal(r.riskTier, 'critical');
   assert.equal(r.payloadHits.shouldBlock, true);
@@ -94,10 +94,18 @@ test('assessFleet: aggregates tiers and unsanctioned counts', () => {
   assert.ok(fleet.summary.byTier.critical >= 1);
 });
 
+test('assessFleet: caller department keys cannot alter aggregate prototypes', () => {
+  const fleet = assessFleet([
+    ev({ department: '__proto__', url: 'https://api.deepseek.com/chat/completions' }),
+  ], SANCTIONED);
+  assert.equal(Object.getPrototypeOf(fleet.summary.byDepartment), null);
+  assert.equal(fleet.summary.byDepartment['__proto__'], 1);
+});
+
 test('assessFleet: top risk users sorted by maxScore', () => {
   const events = [
     ev({ eventId: '1', user: 'low@corp.com', department: 'eng', url: 'https://api.anthropic.com/v1/messages' }),
-    ev({ eventId: '2', user: 'crit@corp.com', department: 'sales', url: 'https://chatgpt.com/api', payloadSnippet: 'SSN 123-45-6789 plus AKIAIOSFODNN7EXAMPLE' }),
+    ev({ eventId: '2', user: 'crit@corp.com', department: 'sales', url: 'https://chatgpt.com/api', payloadSnippet: `SSN 123-45-6789 plus AKIA${'A'.repeat(16)}` }),
   ];
   const fleet = assessFleet(events, SANCTIONED);
   assert.equal(fleet.summary.topRiskUsers[0].user, 'crit@corp.com');
@@ -124,7 +132,7 @@ test('rollupByDepartment: throws on misaligned arrays', () => {
   assert.throws(() => rollupByDepartment([ev({})], []), /align/);
 });
 
-test('rollupByDepartment: clean department gets no recommended action', () => {
+test('rollupByDepartment: clean sample does not imply department compliance', () => {
   const events = [
     ev({ eventId: '1', user: 'a@corp.com', department: 'platform', url: 'https://api.anthropic.com/v1/messages' }),
   ];
@@ -133,5 +141,5 @@ test('rollupByDepartment: clean department gets no recommended action', () => {
   const platform = departments.find((d) => d.department === 'platform');
   assert.ok(platform);
   assert.equal(platform!.exposureScore, 0);
-  assert.match(platform!.recommendedAction, /compliant|monitor/i);
+  assert.match(platform!.recommendedAction, /No flagged sample events; broader coverage is unverified/i);
 });
